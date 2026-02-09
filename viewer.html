@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Viewer</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background: #111; color: #eee; font-family: monospace; text-align: center; padding: 20px; }
+        
+        .container { max-width: 500px; margin: 50px auto; }
+        
+        .login-box {
+            background: #1a1a1a; padding: 30px; border-radius: 10px; border: 1px solid #333;
+        }
+
+        input {
+            width: 100%; padding: 15px; margin: 20px 0;
+            background: #000; border: 1px solid #444; color: #fff;
+            font-size: 1.5rem; text-align: center; letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        button { 
+            width: 100%; padding: 15px; background: #007bff; border: none; 
+            font-weight: bold; cursor: pointer; border-radius: 5px; color: #fff; font-size: 1.1rem;
+        }
+        button:hover { background: #0056b3; }
+
+        #status { margin-top: 15px; font-size: 0.9rem; color: #888; }
+
+        #remote-video {
+            width: 100%; background: #000; border: 2px solid #007bff;
+            margin-top: 20px; display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>👁️ GUEST VIEWER</h1>
+        <p>Masukkan ID Admin untuk menonton.</p>
+
+        <div class="login-box" id="login-panel">
+            <input type="text" id="admin-id" placeholder="KODE ID (4 Digit)" maxlength="4">
+            <button onclick="joinStream()">MASUK & TONTON</button>
+            <div id="status">Siap menghubungkan...</div>
+        </div>
+
+        <video id="remote-video" autoplay playsinline></video>
+    </div>
+
+    <script>
+        let peer = null;
+        const videoElement = document.getElementById('remote-video');
+        const statusDiv = document.getElementById('status');
+        const inputId = document.getElementById('admin-id');
+        const loginPanel = document.getElementById('login-panel');
+
+        function joinStream() {
+            const adminID = inputId.value.trim().toUpperCase();
+
+            if (adminID.length < 3) {
+                alert("Masukkan ID Admin yang valid!");
+                return;
+            }
+
+            statusDiv.innerText = "Menghubungkan ke " + adminID + "...";
+            
+            // Buat Peer Penonton (ID Random)
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                console.log('My Peer ID: ' + id);
+                
+                // Panggil Admin untuk meminta video
+                // Kita mengirim stream kosong (null) karena kita cuma mau nerima
+                const call = peer.call(adminID, null);
+
+                call.on('stream', (remoteStream) => {
+                    // Jika Admin mengirim stream video
+                    videoElement.srcObject = remoteStream;
+                    videoElement.style.display = 'block';
+                    loginPanel.style.display = 'none'; // Sembunyikan login panel
+                    statusDiv.innerText = "TERHUBUNG!";
+                });
+
+                call.on('close', () => {
+                    alert("Admin memutus koneksi.");
+                    location.reload();
+                });
+
+                call.on('error', (err) => {
+                    console.error(err);
+                    statusDiv.innerText = "Gagal terhubung. Pastikan ID Admin benar.";
+                    statusDiv.style.color = "red";
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.error(err);
+                statusDiv.innerText = "Error Koneksi Jaringan.";
+                statusDiv.style.color = "red";
+            });
+        }
+    </script>
+</body>
+</html>

